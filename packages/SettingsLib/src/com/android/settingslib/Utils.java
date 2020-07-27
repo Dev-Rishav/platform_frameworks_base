@@ -178,6 +178,8 @@ public class Utils {
     public static String getBatteryStatus(Resources res, Intent batteryChangedIntent) {
         int status = batteryChangedIntent.getIntExtra(BatteryManager.EXTRA_STATUS,
                 BatteryManager.BATTERY_STATUS_UNKNOWN);
+        boolean voocChargeStatus = batteryChangedIntent.getBooleanExtra(
+                BatteryManager.EXTRA_VOOC_CHARGER, false);
         String statusString;
         if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
             statusString = res.getString(R.string.battery_info_status_charging);
@@ -187,6 +189,9 @@ public class Utils {
             statusString = res.getString(R.string.battery_info_status_not_charging);
         } else if (status == BatteryManager.BATTERY_STATUS_FULL) {
             statusString = res.getString(R.string.battery_info_status_full);
+	} else if (voocChargeStatus) {
+                statusString = res.getString(R.string.battery_info_status_vooc_charging);
+
         } else {
             statusString = res.getString(R.string.battery_info_status_unknown);
         }
