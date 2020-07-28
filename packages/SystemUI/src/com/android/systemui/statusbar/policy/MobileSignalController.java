@@ -114,6 +114,11 @@ public class MobileSignalController extends SignalController<
     private boolean mVoLTEicon;
     // Volte Icon Style
     private int mVoLTEstyle;
+    // Vowifi Icon
+    private boolean mVoWiFiIcon;
+    private boolean mVoWiFiIconShowing = false;
+    // Vowifi Style
+    private int mVoWiFiIconStyle;
 
     // Data disabled icon
     private boolean mDataDisabledIcon;
@@ -196,19 +201,25 @@ public class MobileSignalController extends SignalController<
 
         void observe() {
            ContentResolver resolver = mContext.getContentResolver();
-           resolver.registerContentObserver(Settings.System.getUriFor(
-                  Settings.System.SHOW_FOURG),
-                  false, this, UserHandle.USER_ALL);
-           resolver.registerContentObserver(Settings.System.getUriFor(
-                  Settings.System.SHOW_VOLTE_ICON),
-                  false,this, UserHandle.USER_ALL);
-           resolver.registerContentObserver(
-	            Settings.System.getUriFor(Settings.System.VOLTE_ICON_STYLE),
-                  false,this, UserHandle.USER_ALL);
-           resolver.registerContentObserver(
-                  Settings.System.getUriFor(Settings.System.DATA_DISABLED_ICON),
-                  false, this, UserHandle.USER_ALL);
-           updateSettings();
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.SHOW_FOURG),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.SHOW_VOLTE_ICON),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.SHOW_VOWIFI_ICON),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.VOLTE_ICON_STYLE),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.VOWIFI_ICON_STYLE),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.DATA_DISABLED_ICON),
+                    false, this, UserHandle.USER_ALL);
+            updateSettings();
         }
 
         /*
@@ -228,8 +239,14 @@ public class MobileSignalController extends SignalController<
         mVoLTEicon = Settings.System.getIntForUser(resolver,
                 Settings.System.SHOW_VOLTE_ICON, 0,
                 UserHandle.USER_CURRENT) == 1;
+        mVoWiFiIcon = Settings.System.getIntForUser(resolver,
+                Settings.System.SHOW_VOWIFI_ICON, 0,
+                UserHandle.USER_CURRENT) == 1;
         mVoLTEstyle = Settings.System.getIntForUser(resolver,
                 Settings.System.VOLTE_ICON_STYLE, 0,
+                UserHandle.USER_CURRENT);
+        mVoWiFiIconStyle = Settings.System.getIntForUser(resolver,
+                Settings.System.VOWIFI_ICON_STYLE, 0,
                 UserHandle.USER_CURRENT);
         mDataDisabledIcon = Settings.System.getIntForUser(resolver,
                 Settings.System.DATA_DISABLED_ICON, 1,
@@ -352,7 +369,7 @@ public class MobileSignalController extends SignalController<
         mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPA, hGroup);
         mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPAP, hPlusGroup);
 
-        boolean shouldShow4G = mShow4GUserConfig == -1 ? 
+        boolean shouldShow4G = mShow4GUserConfig == -1 ?
                 mConfig.show4gForLte : (mShow4GUserConfig == 1);
         if (shouldShow4G) {
             mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_LTE, TelephonyIcons.FOUR_G);
@@ -424,7 +441,7 @@ public class MobileSignalController extends SignalController<
     private int getVolteResId() {
         int resId = 0;
 
-        if (mCurrentState.imsRegistered && mVoLTEicon) {
+        if (mCurrentState.imsRegistered && mVoLTEicon && !mVoWiFiIconShowing) {
             switch(mVoLTEstyle) {
                 // VoLTE
                 case 1:
@@ -547,8 +564,21 @@ public class MobileSignalController extends SignalController<
                 && !mCurrentState.carrierNetworkChangeMode
                 && mCurrentState.activityOut;
         showDataIcon &= mCurrentState.isDefault || dataDisabled;
+
         int typeIcon = (showDataIcon || mConfig.alwaysShowDataRatIcon) ? icons.mDataType : 0;
+
+        MobileIconGroup vowifiIconGroup = getVowifiIconGroup();
+        if (mConfig.showVowifiIcon && mVoWiFiIcon && vowifiIconGroup != null) {
+            typeIcon = vowifiIconGroup.mDataType;
+            statusIcon = new IconState(true,
+                    mCurrentState.enabled && !mCurrentState.airplaneMode? statusIcon.icon : 0,
+                    statusIcon.contentDescription);
+            mVoWiFiIconShowing = true;
+        } else {
+            mVoWiFiIconShowing = false;
+        }
         int volteIcon = isVolteSwitchOn() ? getVolteResId() : 0;
+
         callback.setMobileDataIndicators(statusIcon, qsIcon, typeIcon, qsTypeIcon,
                 activityIn, activityOut, volteIcon, dataContentDescription, dataContentDescriptionHtml,
                 description, icons.mIsWide, mSubscriptionInfo.getSubscriptionId(),
@@ -852,6 +882,39 @@ public class MobileSignalController extends SignalController<
         mCurrentState.activityDormant = activity == TelephonyManager.DATA_ACTIVITY_DORMANT;
 
         notifyListenersIfNecessary();
+    }
+
+    private boolean isCallIdle() {
+        return mCallState == TelephonyManager.CALL_STATE_IDLE;
+    }
+
+    private boolean isVowifiAvailable() {
+        return mCurrentState.voiceCapable &&  mCurrentState.imsRegistered
+                && mServiceState.getDataNetworkType() == TelephonyManager.NETWORK_TYPE_IWLAN;
+    }
+
+    private MobileIconGroup getVowifiIconGroup() {
+        if (isVowifiAvailable()) {
+            switch (mVoWiFiIconStyle) {
+                case 0:
+                default:
+                    return TelephonyIcons.VOWIFI;
+                // OOS
+                case 1:
+                    return TelephonyIcons.VOWIFI_ONEPLUS;
+                // Motorola
+                case 2:
+                    return TelephonyIcons.VOWIFI_MOTO;
+                // ASUS
+                case 3:
+                    return TelephonyIcons.VOWIFI_ASUS;
+                // EMUI (Huawei P10)
+                case 4:
+                    return TelephonyIcons.VOWIFI_EMUI;
+            }
+        } else {
+            return null;
+        }
     }
 
     @Override
