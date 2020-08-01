@@ -6740,6 +6740,16 @@ public final class Settings {
                 new SettingsValidators.InclusiveIntegerRangeValidator(0, 4);
 
         /**
+         * Powermenu backgroud blur radius
+         * Value as percentage
+         * @hide
+         */
+        public static final String POWER_MENU_BG_BLUR_RADIUS = "power_menu_bg_blur_radius";
+        /** @hide */
+        private static final Validator POWER_MENU_BG_BLUR_RADIUS_VALIDATOR =
+                new SettingsValidators.InclusiveIntegerRangeValidator(5, 100);
+
+        /**
          * Whether to show heads up on new music tracks
          * @hide
          */
@@ -7027,6 +7037,7 @@ public final class Settings {
             SWITCH_STYLE,
             POWER_MENU_BG,
             POWER_MENU_BG_STYLE,
+            POWER_MENU_BG_BLUR_RADIUS,
             SHOW_MEDIA_HEADS_UP,
         };
 
@@ -7593,6 +7604,7 @@ public final class Settings {
             VALIDATORS.put(SWITCH_STYLE, SWITCH_STYLE_VALIDATOR);
             VALIDATORS.put(POWER_MENU_BG, POWER_MENU_BG_VALIDATOR);
             VALIDATORS.put(POWER_MENU_BG_STYLE, POWER_MENU_BG_STYLE_VALIDATOR);
+            VALIDATORS.put(POWER_MENU_BG_BLUR_RADIUS, POWER_MENU_BG_BLUR_RADIUS_VALIDATOR);
             VALIDATORS.put(SHOW_MEDIA_HEADS_UP, SHOW_MEDIA_HEADS_UP_VALIDATOR);
         }
 
